@@ -1,59 +1,80 @@
 
-N=1000; % Total Initial Population
-r=0.3; % Effectiveness of Isolation
-l=0.5; % Relative Transmissibility of Isolated Individuals
-mu=4.98*10^-5; % Natural Death Rate
-alpha=1/10; % 
-gamma=1/14; % Removal Rate of Infectious Individuals
-gammar=1/10; % Removal Rate of Isolated Individuals
-beta=0.3335; % Mean Transmission Rate
-delta=0.15; % Probability of a Recovered Individuals becomes Susceptible
-d=1/14; % Removal Rate of Recovered Individuals
-T=0; % Number of Tests
-T1=80;
-ss=0.95; % Succes Rate of Sampling
-st=0.85; % Succes Rate of Test
-c=ss*st; % Succes Rate
-r1=(1-r)*l; 
+N=1500;
+r=0.6;
+l=0.5;
+mu=4.98*10^-5;
+alpha=1/4;
+zeta=1/3;
+gamma=1/6;
+gammar=1/5;
+mean_cont=0.9575;
+transm_risk=0.6;
+beta=mean_cont*transm_risk; %R0
+delta=0.15;
+kappa=1/7;
+kappar=1/9;
+tau=1/10;
+h=0.29;
+d=1/14;
+T=0;
+T1=850;
+ss=0.92; % Succes Rate of Sampling
+st=0.95; % Succes Rate of Test
+c=ss*st;
+r1=(1-r)*l;
 rate=T*c; 
 rate1=T1*c;
-tD=25; % Start of Drone Operation
-te=50; % End of Drone Operation
+tD1=20; % Start of Drone Operation
+te1=70; % End of Drone Operation
+tD2=20; % Start of Drone Operation
+te2=70; % End of Drone Operation
+
+
+tspan = 0:1:800;
+xinit = [1495,0,0,5,0,0];
+options = odeset('NonNegative',4);
 
 f = @(t1,y1) [mu*N-mu*y1(1)-beta*(y1(4)+r1*y1(3))/(N-r*y1(3))*y1(1)+delta*d*y1(5);...
-    (beta*(y1(4)+r1*y1(3))/(N-r*y1(3))*y1(1))-(mu+alpha*(1+rate/N))*y1(2);...
-    alpha*rate/N*(y1(2)+y1(4))-(gammar+mu)*y1(3);...
-    alpha*y1(2)-(gamma+mu+alpha*rate/N)*y1(4);...
-    gammar*y1(3)+gamma*y1(4)-mu*y1(5)-delta*d*y1(5)];
-
+        (beta*(y1(4)+r1*y1(3))/(N-r*y1(3))*y1(1))-(mu+alpha+(rate/N)*(t1>tD1)*(t1<te1))...
+        *y1(2);...
+        rate/N*(t1>tD1)*(t1<te1)*(y1(2))+zeta*rate/N*(t1>tD1)*(t1<te1)*y1(4)-(gammar+mu+kappar*h)*y1(3);...
+        alpha*y1(2)-(kappa*h+gamma+mu+zeta*rate/N*(t1>tD1)*(t1<te1))*y1(4);...
+        tau*y1(6)+gammar*y1(3)+gamma*y1(4)-mu*y1(5)-delta*d*y1(5);
+        h*(kappar*y1(3)+kappa*y1(4))-(mu+tau)*y1(6)];
+    [t1,y1]=ode45(f, tspan, xinit,options);
+    
+    
 g = @(t2,y2) [mu*N-mu*y2(1)-beta*(y2(4)+r1*y2(3))/(N-r*y2(3))*y2(1)+delta*d*y2(5);...
-    (beta*(y2(4)+r1*y2(3))/(N-r*y2(3))*y2(1))-(mu+alpha*...
-    (1+(rate1/N)*(t2>tD)*(t2<te)))*y2(2);...
-    alpha*rate1/N*(t2>tD)*(y2(2)+y2(4))-(gammar+mu)*y2(3);...
-    alpha*y2(2)-(gamma+mu+alpha*rate1/N)*y2(4);...
-    gammar*y2(3)+gamma*y2(4)-mu*y2(5)-delta*d*y2(5)];
+        (beta*(y2(4)+r1*y2(3))/(N-r*y2(3))*y2(1))-(mu+alpha+(alpha*rate1/N)*(t2>tD2)*(t2<te2))...
+        *y2(2);...
+        alpha*rate1/N*(t2>tD2)*(t2<te2)*(y2(2))+zeta*rate1/N*(t2>tD2)*(t2<te2)*y2(4)-(gammar+mu+kappar*h)*y2(3);...
+        alpha*y2(2)-(kappa*h+gamma+mu+zeta*rate1/N*(t2>tD2)*(t2<te2))*y2(4);...
+        tau*y2(6)+gammar*y2(3)+gamma*y2(4)-mu*y2(5)-delta*d*y2(5);
+        h*(kappar*y2(3)+kappa*y2(4))-(mu+tau)*y2(6)];
+    [t2,y2]=ode45(g, tspan, xinit,options);
+   
+    
+    
+I1=y1(:,3)+y1(:,4)+y1(:,6);
+I2=y2(:,3)+y2(:,4)+y2(:,6);
+ 
+HC=ones(size(I1))*4;
+  
 
-tspan = 0:1:150; % Time Span of the Simulation
-conds = [960,0,0,40,0]; % Initial Conditons in order; 
-                        % ('S(t)', 'E(t)', 'J(t)', 'I(t)', 'R(t)')
-[t1,y1]=ode45(f, tspan, conds); 
-[t2,y2]=ode45(g, tspan, conds);
-plot(y2(:,:))
-%hold on
-%plot(y1(:,4),'g')
-legend('S(t)', 'E(t)', 'J(t)', 'I(t)', 'R(t)')
-Sum=0;
+ plot(y1(:,6),'r')
+ legend('S(t)', 'E(t)', 'J(t)', 'I(t)', 'R(t)')
+ hold on
+ plot(y2(:,6),'b')
+ %plot(HC)
+Sum1=0;
 Sum2=0;
-for i=1:75
-sn=y1(i,3)+y1(i,4);
-Sum=Sum+sn;
+for i=1:100
+sn=I1(i);
+Sum1=Sum1+sn;
 end
-for i=1:75
-sn=y2(i,3)+y2(i,4);
+for i=1:100
+sn=I2(i);
 Sum2=Sum2+sn;
 end
-
-Infection_Toll = Sum2- Sum
-
-
+Sum2-Sum1
 
