@@ -1,79 +1,44 @@
-N=1500;
-r=0.6;
-l=0.5;
-mu=4.98*10^-5;
-alpha=1/4;
-zeta=1/3;
-gamma=1/6;
-gammar=1/5;
+pi = 14.85; %recruitment rate
+mu=0.0088; %natural death rate
+kappa=0.156986; %rate of development of clinical symptoms
+alpha=0.156986; %hospitalization rate of quarantine
+phi=0.20619; %hospitalization rate of infectious
+psi=0.01; %loss of infection acquired immunity
+d1=0.04227; %death rate infectious
+d2=0.027855; %death rate hospitalized
+hnu=.0; %relative infectiousness of hospitalized e.g. 0=perfect intervention
+gamma1=0.03521; %recovery rate of infectious
+gamma2=0.027855; %recovery rate of hospitalized
+gamma3=0.03521;
 mean_cont=0.9575;
-transm_risk=0.6;
-beta=mean_cont*transm_risk; 
-delta=0.05;
-kappa=1/7;
-kappar=1/9;
-tau=1/10;
-h=0.29;
-d=1/14;
-T=100;
-T1=1000;
-ss=0.92; % Succes Rate of Sampling
-st=0.95; % Succes Rate of Test
-c=1;%ss*st;
-r1=(1-r)*l;
-rate=T*c; 
-rate1=T1*c;
-tD1=20; % Start of Drone Operation
-te1=60; % End of Drone Operation
-tD2=20; % Start of Drone Operation
-te2=60; % End of Drone Operation
+transm_risk=0.20;
+beta=mean_cont*transm_risk;
+st=0.95; %succes rate of test
+ss=0.95; %succes rate of sampling
+rt=1; %result of test e.g. 1=Same day antigen=6, genome=4-5 and higher success
+tr=0.01*rt; %testing rate e.g. T/N, 1=Everybody is tested
+sigma=st*ss*tr; %quarantine rate
+
+N=1500; %population
 
 
-tspan = 0:1:200;
-xinit = [1495,0,0,5,0,0];
-options = odeset('NonNegative',4);
+tspan = 0:1:500; % Time Span of the Simulation
+xinit = [1490,0,10,0,0,0,1500]; % Initial Conditons in order; 
+                        % ('S(t)', 'E(t)', 'I(t)', 'Q(t)', 'H(t)', 'R(t)', 'N(t)')
 
-f = @(t1,y1) [mu*N-mu*y1(1)-beta*(y1(4)+r1*y1(3))/(N-r*y1(3))*y1(1)+delta*d*y1(5);...
-    (beta*(y1(4)+r1*y1(3))/(N-r*y1(3))*y1(1))-(mu+alpha*...
-    (1+(rate/N)*(t1>tD1)*(t1<te1)))*y1(2);...
-    rate/N*(t1>tD1)*(t1<te1)*(alpha*y1(2)+zeta*y1(4))-(kappar*h+gammar+mu)*y1(3);...
-    alpha*y1(2)-(kappa*h+gamma+mu+zeta*(rate/N)*(t1>tD1)*(t1<te1))*y1(4);...
-    tau*y1(6)+gammar*y1(3)+gamma*y1(4)-mu*y1(5)-delta*d*y1(5);
-    h*(kappar*y1(3)+kappa*y1(4))-(mu+tau)*y1(6)];
+f = @(t1,y1) [pi+psi*y1(6)-(beta*(y1(3)+hnu*y1(5))/y1(7))*y1(1)-mu*y1(1);
+    (beta*(y1(3)+hnu*y1(5))/y1(7))*y1(1)-(kappa+sigma+mu)*y1(2);
+    kappa*y1(2)-(gamma1+phi+mu+d1)*y1(3);
+    sigma*y1(2)-(alpha+mu)*y1(4);
+    alpha*y1(4)+phi*y1(3)-(gamma2+mu+d2)*y1(5);
+    gamma1*y1(3)+gamma2*y1(5)-(psi+mu)*y1(6);
+    pi-mu*y1(7)-(d1*y1(3)+d2*y1(5))];
 
-g = @(t2,y2) [mu*N-mu*y2(1)-beta*(y2(4)+r1*y2(3))/(N-r*y2(3))*y2(1)+delta*d*y2(5);...
-    (beta*(y2(4)+r1*y2(3))/(N-r*y2(3))*y2(1))-(mu+alpha*...
-    (1+(rate1/N)*(t2>tD2)*(t2<te2)))*y2(2);...
-    rate1/N*(t2>tD2)*(t2<te2)*(alpha*y2(2)+zeta*y2(4))-(kappar*h+gammar+mu)*y2(3);...
-    alpha*y2(2)-(kappa*h+gamma+mu+zeta*(rate1/N)*(t2>tD2)*(t2<te2))*y2(4);...
-    tau*y2(6)+gammar*y2(3)+gamma*y2(4)-mu*y2(5)-delta*d*y2(5);
-    h*(kappar*y2(3)+kappa*y2(4))-(mu+tau)*y2(6)];
+[t1,y1]=ode45(f, tspan, xinit);
 
-[t1,y1]=ode45(f, tspan, xinit); 
-[t2,y2]=ode45(g, tspan, xinit);
-   
-    
-    
-I1=y1(:,3)+y1(:,4)+y1(:,6);
-I2=y2(:,3)+y2(:,4)+y2(:,6);
- 
-HC=ones(size(I1))*4;
-  
+%plot(y1(:,:))
 
- plot(I2(:,:))
- legend('S(t)', 'E(t)', 'J(t)', 'I(t)', 'R(t)')
- hold on
- plot(I1(:,:),'r')
- %plot(HC)
-Sum1=0;
-Sum2=0;
-for i=1:100
-sn=I1(i);
-Sum1=Sum1+sn;
-end
-for i=1:100
-sn=I2(i);
-Sum2=Sum2+sn;
-end
-Sum2-Sum1
-
+%legend('S(t)', 'E(t)', 'I(t)', 'Q(t)', 'H(t)', 'R(t)', 'N(t)')
+plot(y1(:,5))
+hold on
+        
